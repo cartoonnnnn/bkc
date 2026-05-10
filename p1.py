@@ -1,5 +1,5 @@
 git --version
-git mkdir newproject
+mkdir newproject
 cd newproject
 nano demo.py
 
