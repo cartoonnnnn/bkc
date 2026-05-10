@@ -1,4 +1,4 @@
-sudo su
+sudo su -
 
 # Docker Basic Commands
 docker images
@@ -25,7 +25,7 @@ docker rm <container_id>
 docker ps -a
 
 # Run nginx container with custom container name
-docker run -d -p 8000:80 --name my-nginx nginx
+docker run -d -p 8000:80 my_nginx nginx
 
 # Enter inside container
 docker exec -it my-nginx bash
