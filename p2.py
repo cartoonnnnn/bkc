@@ -1,150 +1,50 @@
-sudo su -
 
-# Docker Basic Commands
-docker images
-docker pull nginx
-docker run hello-world
-docker run -d -p 8000:80 nginx
-docker ps
+import numpy as np, random, math
+import matplotlib.pyplot as plt
 
-# Stop Container using Container ID
-docker stop <container_id>
+np.random.seed(42)
+random.seed(42)
 
-docker ps
-docker ps -a
+c = np.random.rand(30, 2) * 100
+d = np.sqrt(((c[:, None] - c[None, :])**2).sum(2))
+r = list(range(30))
+random.shuffle(r)
 
-# Start Container again
-docker start <container_id>
+def cost(r):
+    return sum(d[r[i], r[(i+1)%30]] for i in range(30))
 
-docker ps
+cur = best = cost(r)
+b = r[:]
+h = [best]
+T = 100
 
-# Stop and Remove Container
-docker stop <container_id>
-docker rm <container_id>
+for _ in range(20000):
+    a, z = sorted(random.sample(range(30), 2))
+    nr = r[:a] + r[a:z+1][::-1] + r[z+1:]
+    nc = cost(nr)
 
-docker ps -a
+    if nc < cur or random.random() < math.exp((cur-nc)/T):
+        r, cur = nr, nc
+        if cur < best:
+            best, b = cur, r[:]
 
-# Run nginx container with custom container name
-docker run -d -p 8000:80 my_nginx nginx
+    h.append(best)
+    T *= 0.995
+    if T < 1e-3:
+        break
 
-# Enter inside container
-docker exec -it my-nginx bash
+print(f"Best Tour Length: {best:.2f}")
 
-# Move to nginx html directory
-cd /usr/share/nginx/html
+plt.plot(h)
+plt.xlabel("Iteration")
+plt.ylabel("Best Tour Length")
+plt.title("Simulated Annealing Progress")
+plt.grid()
+plt.show()
 
-# Create and edit HTML file
-nano index.html
-
-# Edit index.html content and save file
-exit
-
-docker ps
-
-# Stop and remove container
-docker stop <container_id>
-docker rm <container_id>
-
-# Remove nginx image
-docker rmi nginx
-
-# If nano does not exist
-apt update
-apt install nano -y
-
-# ---------------------------------------------------
-# Creating Custom Flask Docker Image
-# ---------------------------------------------------
-
-mkdir Documents
-cd Documents
-
-mkdir pythonproject
-cd pythonproject
-
-mkdir templates
-
-# Create Flask app
-nano app.py
-
-# Add following code in app.py
-
-from flask import Flask, render_template
-
-app = Flask(__name__)
-
-@app.route("/")
-def home_page():
-    return render_template("index.html")
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-
-# Move to templates folder
-cd templates
-
-# Create HTML file
-nano index.html
-
-# Add following HTML code
-
-<!DOCTYPE html>
-<html>
-<head>
-<title>Home Page</title>
-</head>
-
-<body>
-<h1>Welcome to my Flask app</h1>
-<p>This is the home page</p>
-</body>
-
-</html>
-
-# Move back
-cd ..
-
-# Install Flask
-pip install flask --break-system-packages
-
-# Run Flask app
-python3 app.py
-
-# Create Dockerfile
-nano Dockerfile
-
-# Add following Dockerfile code
-
-FROM python:3-alpine3.15
-WORKDIR /app
-COPY . /app
-RUN pip install flask
-CMD ["python3","app.py"]
-
-# Build Docker Image
-sudo docker build -t myimage:1 .
-
-# Check Docker Images
-sudo docker images
-
-# Run Docker Container
-sudo docker run -p 8000:5000 myimage:1
-
-# ---------------------------------------------------
-# Working with Docker Hub
-# ---------------------------------------------------
-
-# Login to Docker Hub website
-# https://hub.docker.com
-
-# Login from terminal
-sudo docker login
-
-# Tag Docker Image
-sudo docker tag myimage:1 <your docker username>/dockerimage:1
-
-# Check Images
-sudo docker images
-
-# Push Image to Docker Hub
-sudo docker push omanazzz/dockerimage:1
+b.append(b[0])
+plt.plot(c[b, 0], c[b, 1], '-o')
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.title(f"Final TSP Tour (Length = {best:.2f})")
+plt.show()
