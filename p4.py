@@ -1,165 +1,53 @@
-# ---------------------------------------------------
-# Prometheus and Grafana
-# Scraping Prometheus Metrics and Visualizing in Grafana
-# ---------------------------------------------------
 
-mkdir monitoring
+import numpy as np
+import matplotlib.pyplot as plt
 
-cd monitoring
+def f(x):
+    return np.sum(x**2)
 
-# ---------------------------------------------------
-# Install Docker Compose
-# ---------------------------------------------------
+def DE(method):
+    x = np.random.uniform(-5, 5, (40, 10))
+    y = np.sum(x**2, axis=1)
+    curve = [min(y)]
 
-sudo apt update
+    for _ in range(200):
+        best = x[y.argmin()].copy()
 
-sudo apt install docker-compose-v2 -y
+        for i in range(40):
+            ids = np.delete(np.arange(40), i)
+            a, b = x[np.random.choice(ids, 2, False)]
 
-docker compose version
+            if method == "rand/1":
+                c = x[np.random.choice(np.setdiff1d(ids, []), 1)[0]]
+                v = a + 0.8*(b-c)
+            elif method == "best/1":
+                v = best + 0.8*(a-b)
+            else:
+                v = x[i] + 0.8*(best-x[i]) + 0.8*(a-b)
 
-# ---------------------------------------------------
-# Create docker-compose.yml
-# ---------------------------------------------------
+            v = np.clip(v, -5, 5)
+            m = np.random.rand(10) < 0.9
+            m[np.random.randint(10)] = True
+            trial = np.where(m, v, x[i])
+            val = f(trial)
 
-nano docker-compose.yml
+            if val < y[i]:
+                x[i], y[i] = trial, val
 
-version: '3'
+        curve.append(min(y))
 
-services:
+    return min(y), curve
 
-  prometheus:
+np.random.seed(42)
 
-    image: prom/prometheus
+for method in ["rand/1", "best/1", "current-to-best/1"]:
+    value, curve = DE(method)
+    print(f"{method} best value = {value:.6f}")
+    plt.plot(curve, label=method)
 
-    container_name: prometheus
-
-    ports:
-      - "9090:9090"
-
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-
-  grafana:
-
-    image: grafana/grafana
-
-    container_name: grafana
-
-    ports:
-      - "3000:3000"
-
-# ---------------------------------------------------
-# Create prometheus.yml
-# ---------------------------------------------------
-
-nano prometheus.yml
-
-global:
-
-  scrape_interval: 15s
-
-scrape_configs:
-
-  - job_name: "prometheus"
-
-    static_configs:
-
-      - targets: ["prometheus:9090"]
-
-# ---------------------------------------------------
-# Start Containers
-# ---------------------------------------------------
-
-sudo docker compose up -d
-
-sudo docker ps
-
-# Verify containers:
-# prometheus
-# grafana
-
-# ---------------------------------------------------
-# Open Prometheus
-# ---------------------------------------------------
-
-# http://localhost:9090
-
-# Run Queries
-
-prometheus_ready
-
-process_resident_memory_bytes
-
-prometheus_http_requests_total
-
-# ---------------------------------------------------
-# Open Grafana
-# ---------------------------------------------------
-
-# http://localhost:3000
-
-# Username
-admin
-
-# Password
-admin
-
-# ---------------------------------------------------
-# Add Prometheus Data Source
-# ---------------------------------------------------
-
-# Connections -> Add new connection
-
-# Search:
-Prometheus
-
-# Add new data source
-
-# URL
-http://prometheus:9090
-
-# Click:
-Save & Test
-
-# ---------------------------------------------------
-# Create Dashboard
-# ---------------------------------------------------
-
-# Dashboards -> New Dashboard
-
-# Add Visualization
-
-# Select:
-Prometheus Data Source
-
-# ---------------------------------------------------
-# Visualization 1
-# ---------------------------------------------------
-
-# Query
-process_resident_memory_bytes
-
-# Visualization
-Time Series
-
-# Apply
-
-# ---------------------------------------------------
-# Visualization 2
-# ---------------------------------------------------
-
-# Add Visualization
-
-# Query
-prometheus_http_requests_total
-
-# Visualization
-Time Series
-
-# Apply
-
-# ---------------------------------------------------
-# Stop Containers
-# ---------------------------------------------------
-
-sudo docker compose down
+plt.xlabel("Generation")
+plt.ylabel("Best Objective Value")
+plt.title("Differential Evolution Convergence")
+plt.legend()
+plt.grid()
+plt.show()
