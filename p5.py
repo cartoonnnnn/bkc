@@ -1,117 +1,50 @@
-----------
 
-sudo apt update
+import numpy as np
+import matplotlib.pyplot as plt
 
-# ---------------------------------------------------
-# Install kubectl
-# ---------------------------------------------------
+def sphere(x):
+    return np.sum(x**2)
 
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+def BBO(func, dim=5, pop_size=20, generations=100, bounds=(-5,5), mutation_rate=0.05):
+    lo, hi = bounds
+    pop = np.random.uniform(lo, hi, (pop_size, dim))
+    fit = np.array([func(x) for x in pop])
+    curve = []
 
-chmod +x kubectl
+    for _ in range(generations):
+        idx = np.argsort(fit)
+        pop, fit = pop[idx], fit[idx]
+        f = fit.max() - fit
+        f = f/(f.max()+1e-9) if f.max() else np.ones(pop_size)
+        lam, mu = 1-f, f
+        p = mu/mu.sum() if mu.sum() else None
+        new = pop.copy()
 
-sudo mv kubectl /usr/local/bin/
+        for i in range(pop_size):
+            for j in range(dim):
+                if np.random.rand() < lam[i]:
+                    donor = np.random.choice(pop_size, p=p)
+                    new[i,j] = pop[donor,j]
+            if np.random.rand() < mutation_rate:
+                new[i] = np.random.uniform(lo, hi, dim)
 
-kubectl version --client
+        nf = np.array([func(x) for x in new])
+        pop = np.vstack((pop,new))
+        fit = np.concatenate((fit,nf))
+        idx = np.argsort(fit)[:pop_size]
+        pop, fit = pop[idx], fit[idx]
+        curve.append(fit[0])
 
-# ---------------------------------------------------
-# Install Minikube
-# ---------------------------------------------------
+    return pop[0], fit[0], curve
 
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+np.random.seed(42)
+best, value, curve = BBO(sphere, generations=200)
 
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
+print("Best Solution:", best)
+print("Best Fitness:", value)
 
-minikube version
-
-# ---------------------------------------------------
-# Configure Docker Permission
-# ---------------------------------------------------
-
-sudo usermod -aG docker $USER
-
-newgrp docker
-
-docker --version
-
-# ---------------------------------------------------
-# Start Minikube
-# ---------------------------------------------------
-
-minikube start --driver=docker
-
-minikube status
-
-# ---------------------------------------------------
-# Kubernetes Node Information
-# ---------------------------------------------------
-
-kubectl get nodes
-
-# ---------------------------------------------------
-# Create Pod
-# ---------------------------------------------------
-
-kubectl run my-pod --image=nginx --restart=Never
-
-kubectl get pods
-
-kubectl get pod my-pod -o wide
-
-# ---------------------------------------------------
-# Expose Pod
-# ---------------------------------------------------
-
-kubectl expose pod my-pod --type=NodePort --port=80 --name=my-service
-
-kubectl get services
-
-minikube service my-service --url
-
-# ---------------------------------------------------
-# Delete Pod Service
-# ---------------------------------------------------
-
-kubectl delete service my-service
-
-kubectl delete pod my-pod
-
-# ---------------------------------------------------
-# Create Deployment
-# ---------------------------------------------------
-
-kubectl create deployment my-deployment --image=nginx --replicas=2
-
-kubectl get deployments
-
-kubectl get pods
-
-# ---------------------------------------------------
-# Expose Deployment
-# ---------------------------------------------------
-
-kubectl expose deployment my-deployment --type=NodePort --port=80
-
-minikube service my-deployment --url
-
-# ---------------------------------------------------
-# Scale Deployment
-# ---------------------------------------------------
-
-kubectl scale deployment my-deployment --replicas=5
-
-kubectl get pods
-
-# ---------------------------------------------------
-# Delete Deployment
-# ---------------------------------------------------
-
-kubectl delete deployment my-deployment
-
-kubectl get pods
-
-# ---------------------------------------------------
-# Stop Minikube
-# ---------------------------------------------------
-
-minikube stop
+plt.plot(curve)
+plt.title("BBO Convergence Curve (Sphere Function)")
+plt.xlabel("Generations")
+plt.ylabel("Best Fitness Value")
+plt.show()
