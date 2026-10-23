@@ -1,62 +1,45 @@
-git --version
-mkdir newproject
-cd newproject
-nano demo.py
+import random
+def fitness(s):
+    n = len(s)
+    pairs = n * (n - 1) // 2
+    attacks = sum(
+        s[i] == s[j] or abs(s[i] - s[j]) == j - i
+        for i in range(n)
+        for j in range(i + 1, n)
+    )
+    return pairs - attacks
 
-# Write inside demo.py
-print("Hello World")
+def neighbors(s):
+    return [
+        s[:c] + [r] + s[c + 1:]
+        for c in range(len(s))
+        for r in range(len(s))
+        if r != s[c]
+    ]
 
-git init
-git config --global user.name "AKDIAZ15"
-git config --global user.email "aryanraj.cd23@bmsce.ac.in"
+def hill_climb(n):
+    state = [random.randrange(n) for _ in range(n)]
 
-git status
-git add demo.py
-git commit -m "first commit"
+    while True:
+        score = fitness(state)
+        best = max(neighbors(state), key=fitness)
+        if fitness(best) <= score:
+            return state
+        state = best
 
-nano demo.py
+n = 8
+goal = n * (n - 1) // 2
 
-# Change code to
-print("Hello Git")
+for attempt in range(1, 1001):
+    solution = hill_climb(n)
+    if fitness(solution) == goal:
+        break
 
-git status
-git diff
-git add demo.py
-git commit -m "main code added"
+print("Attempts:", attempt)
+print("Fitness:", fitness(solution))
 
-git branch add-feature
-git checkout add-feature
-
-nano demo.py
-
-# Add feature code
-print("Feature Added")
-
-git status
-git add demo.py
-git commit -m "feature added"
-
-git log
-git checkout master
-git merge add-feature
-
-git remote add origin https://github.com/AKDIAZ15/newproject.git
-git remote -v
-
-# GitHub Token Steps
-# Sign in GitHub
-# Profile -> Settings
-# Developer Settings -> Personal Access Tokens -> Tokens (Classic)
-# Generate new token
-# Add note
-# Select No Expiration
-# Check all boxes
-# Generate token
-# Copy and save token in text file
-
-git push -u origin master
-
-# Username = Your GitHub Username
-# Password = Generated Token
-
-# Verify repository on GitHub
+for row in range(n):
+    print(" ".join(
+        "Q" if solution[col] == row else "."
+        for col in range(n)
+    ))
